@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Clock, Video, Phone, MapPin } from 'lucide-react'
 
@@ -13,6 +13,7 @@ export default function NewEventTypePage() {
   const { data: session } = useSession()
   const router = useRouter()
   const [saving, setSaving] = useState(false)
+  const [origin, setOrigin] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -64,6 +65,10 @@ export default function NewEventTypePage() {
 
   const username = session?.user?.email?.split('@')[0] || 'usuario'
 
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto p-8">
@@ -82,7 +87,7 @@ export default function NewEventTypePage() {
           <div className="bg-blue-50 rounded-lg p-4">
             <p className="text-sm text-blue-600">Tu link sera:</p>
             <p className="font-mono text-blue-800">
-              {window.location.origin}/book/{username}/{formData.slug || 'tu-evento'}
+              {origin}/book/{username}/{formData.slug || 'tu-evento'}
             </p>
           </div>
 
