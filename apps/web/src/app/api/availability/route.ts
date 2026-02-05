@@ -3,6 +3,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+interface AvailabilitySlot {
+  dayOfWeek: number
+  startTime: number
+  endTime: number
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -40,7 +46,7 @@ export async function POST(request: Request) {
     // Crear nueva disponibilidad
     if (slots && slots.length > 0) {
       await prisma.availability.createMany({
-        data: slots.map((slot: any) => ({
+        data: slots.map((slot: AvailabilitySlot) => ({
           userId: session.user.id,
           dayOfWeek: slot.dayOfWeek,
           startTime: slot.startTime,

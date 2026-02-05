@@ -22,6 +22,12 @@ interface DaySchedule {
   endTime: string
 }
 
+interface AvailabilitySlot {
+  dayOfWeek: number
+  startTime: number
+  endTime: number
+}
+
 export default function AvailabilityPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -60,7 +66,7 @@ export default function AvailabilityPage() {
             newSchedule[Number(key)].enabled = false
           })
           // Enable days that have availability
-          data.forEach((slot: any) => {
+          data.forEach((slot: AvailabilitySlot) => {
             const hours = Math.floor(slot.startTime / 60)
             const mins = slot.startTime % 60
             const endHours = Math.floor(slot.endTime / 60)
