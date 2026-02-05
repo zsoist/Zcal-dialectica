@@ -5,6 +5,10 @@ interface Props {
   params: { username: string }
 }
 
+interface AvailabilityDay {
+  dayOfWeek: number
+}
+
 export async function GET(request: Request, { params }: Props) {
   try {
     // Buscar usuario por username o email prefix
@@ -35,7 +39,7 @@ export async function GET(request: Request, { params }: Props) {
       distinct: ['dayOfWeek'],
     })
 
-    const days = availability.map((a) => a.dayOfWeek)
+    const days = availability.map((a: AvailabilityDay) => a.dayOfWeek)
 
     return NextResponse.json({ days })
   } catch (error) {

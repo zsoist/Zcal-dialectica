@@ -7,6 +7,15 @@ interface Props {
   params: { username: string }
 }
 
+interface EventType {
+  id: string
+  title: string
+  slug: string
+  description: string | null
+  duration: number
+  color: string
+}
+
 export default async function UserBookingPage({ params }: Props) {
   const user = await prisma.user.findFirst({
     where: {
@@ -62,7 +71,7 @@ export default async function UserBookingPage({ params }: Props) {
           </div>
         ) : (
           <div className="space-y-4">
-            {user.eventTypes.map((eventType) => (
+            {user.eventTypes.map((eventType: EventType) => (
               <Link
                 key={eventType.id}
                 href={`/book/${username}/${eventType.slug}`}
