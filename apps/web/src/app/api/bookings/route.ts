@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createCalendarEvent } from '@/lib/google-calendar'
+import { sendBookingConfirmation, sendBookingNotificationToHost } from '@/lib/email'
 
 export async function POST(request: Request) {
   try {
@@ -65,17 +67,14 @@ export async function POST(request: Request) {
         status: { not: 'CANCELLED' },
         OR: [
           {
-            // El nuevo booking empieza durante uno existente
             startTime: { lte: start },
             endTime: { gt: start },
           },
           {
-            // El nuevo booking termina durante uno existente
             startTime: { lt: end },
             endTime: { gte: end },
           },
           {
-            // El nuevo booking contiene completamente uno existente
             startTime: { gte: start },
             endTime: { lte: end },
           },
@@ -90,7 +89,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verificar que el día tenga disponibilidad configurada
+    // Verificar disponibilidad del día
     const dayOfWeek = start.getDay()
     const availability = await prisma.availability.findFirst({
       where: {
@@ -106,7 +105,18 @@ export async function POST(request: Request) {
       )
     }
 
-    // Crear el booking
+    // Crear evento en Google Calendar (si el usuario tiene cuenta conectada)
+    const calendarResult = await createCalendarEvent({
+      userId: eventType.userId,
+      title: eventType.title,
+      description: `Reunión con ${guestName}\n${guestNotes || ''}`,
+      startTime: start,
+      endTime: end,
+      guestEmail,
+      guestName,
+    })
+
+    // Crear el booking en la base de datos
     const booking = await prisma.booking.create({
       data: {
         userId: eventType.userId,
@@ -118,10 +128,38 @@ export async function POST(request: Request) {
         startTime: start,
         endTime: end,
         status: 'CONFIRMED',
+        googleEventId: calendarResult.eventId,
+        googleMeetLink: calendarResult.meetLink,
       },
     })
 
-    return NextResponse.json(booking, { status: 201 })
+    // Enviar emails de confirmación (en background, no bloqueamos la respuesta)
+    const emailParams = {
+      guestEmail,
+      guestName,
+      hostName: eventType.user.name || 'Host',
+      eventTitle: eventType.title,
+      startTime: start,
+      endTime: end,
+      meetLink: calendarResult.meetLink,
+      timezone: guestTimezone || 'America/New_York',
+    }
+
+    // Enviar al invitado
+    sendBookingConfirmation(emailParams).catch(console.error)
+
+    // Enviar al host
+    if (eventType.user.email) {
+      sendBookingNotificationToHost({
+        ...emailParams,
+        hostEmail: eventType.user.email,
+      }).catch(console.error)
+    }
+
+    return NextResponse.json({
+      ...booking,
+      meetLink: calendarResult.meetLink,
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating booking:', error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
